@@ -1,21 +1,122 @@
+<!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="utf-8">
-    <title>演習課題5-2：外部APIの呼び出しテスト</title>
+    <title>演習課題5-2：外部APIの呼び出しテスト（OpenWeatherMap）</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        h1 {
+            color: #0056b3;
+        }
+        form {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: inline-block; /* フォームの幅を内容に合わせる */
+        }
+        input[type="text"] {
+            padding: 8px;
+            margin-right: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            width: 200px;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e9ecef;
+            border: 1px solid #ced4da;
+            border-radius: 8px;
+            min-height: 50px;
+            word-wrap: break-word; /* 長いテキストの折り返し */
+        }
+        #result p {
+            margin: 5px 0;
+            line-height: 1.5;
+        }
+        #result .error {
+            color: red;
+            font-weight: bold;
+        }
+    </style>
 </head>
 <body>
-    <h1 id="msg">何かのAPI</h1>
+    <h1 id="msg">世界の天気予報</h1>
     <form name="apiform"><p>
-        何かのフォーム：<input type="text" name="form_data">
-        <button type="button" id="btn1" onclick="some_api(this.form)">実行</button>
+        都市名：<input type="text" name="city_name" placeholder="例: Tokyo, London, New York">
+        <button type="button" id="btn1" onclick="getWeather(this.form)">天気取得</button>
     </p></form>
     
-    <div id="result"></div>
+    <div id="result">ここに天気予報が表示されます</div>
     <script>
-        async function some_api(myForm) {
+        async function getWeather(myForm) {
+            // ここにあなたのOpenWeatherMap APIキーを貼り付けてください
+            // 例: const API_KEY = "YOUR_API_KEY_HERE";
+            const API_KEY = "1f51cf40b73fda5f1e2d1a7795faee5c"; // ★★★ ここに取得したAPIキーを貼り付ける ★★★
+            
+            const city = myForm.city_name.value.trim(); // 前後の空白を削除
+            const resultDiv = document.getElementById("result");
+            const endpoint = "https://api.openweathermap.org/data/2.5/weather";
+            if (city === "") {
+                resultDiv.innerHTML = "<p class='error'>都市名を入力してください。</p>";
+                return;
+            }
             // ここにコードを書く
-            document.getElementById("result").innerHTML += myForm.form_data.value+"<br />";
-            document.apiform.reset();
+            try {
+                // APIリクエストのURLを構築
+                // units=metric で摂氏（℃）表示に、lang=ja で日本語表示にする
+                const url = `${endpoint}?q=${city}&appid=${API_KEY}&units=metric&lang=ja`;
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                if (response.ok) { // HTTPステータスコードが200番台の場合
+                    const weatherDescription = data.weather[0].description;
+                    const temperature = data.main.temp;
+                    const feelsLike = data.main.feels_like;
+                    const humidity = data.main.humidity;
+                    const windSpeed = data.wind.speed;
+                    const cityName = data.name; // APIから返される都市名
+                    resultDiv.innerHTML = `
+                        <p><strong>${cityName} の天気</strong></p>
+                        <p>天気: ${weatherDescription}</p>
+                        <p>気温: ${temperature}°C</p>
+                        <p>体感温度: ${feelsLike}°C</p>
+                        <p>湿度: ${humidity}%</p>
+                        <p>風速: ${windSpeed} m/s</p>
+                    `;
+                } else {
+                    // エラーレスポンスの場合
+                    if (data.cod === "404") {
+                        resultDiv.innerHTML = `<p class='error'>都市が見つかりませんでした。「${city}」という都市が存在しないか、入力が間違っています。</p>`;
+                    } else {
+                        resultDiv.innerHTML = `<p class='error'>天気情報の取得に失敗しました。エラーコード: ${data.cod} - ${data.message}</p>`;
+                    }
+                }
+            } catch (error) {
+                console.error("API呼び出し中にエラーが発生しました:", error);
+                resultDiv.innerHTML = "<p class='error'>API呼び出し中にエラーが発生しました。インターネット接続を確認してください。</p>";
+            } finally {
+                // フォームをリセットする（必要に応じて）
+                myForm.city_name.value = ''; // 入力欄をクリア
+            }
         }
     </script>
 </body>
