@@ -3,57 +3,50 @@
 <head>
     <meta charset="utf-8">
     <title>演習課題5-1：郵便番号APIの呼び出しテスト</title>
-    <style>
-        body{
-            font-family: sans-serif;
-            margin: 30px;
-        }
-        input[type="text"] {
-            font-size: 16px;
-            padding: 5px;
-            width: 150px;
-        }
-        button {
-            font-size: 16px;
-            padding: 5px 10px;
-        }
-        #result {
-            margin-top: 20px;
-            font-size: 18px;
-            color: #333;
-        }
-    </style>
 </head>
 <body>
     <h1 id="msg">郵便番号API</h1>
     <form name="apiform"><p>
-        郵便番号：<imput type="text" name="zipcode">
-        <button type="button" id="btn1" onclick="zip_api(this.form)">実行</button>
+        郵便番号：<input type="text" name="zipcode" maxlength="7"> <button type="button" id="btn1" onclick="zip_api(this.form)">実行</button>
     </p></form>
     
     <div id="result">結果はここに表示</div>
     <script>
         async function zip_api(myForm) {
             const endpoint = "https://zipcloud.ibsnet.co.jp/api/search";
-            const zipcode = myForn.zipcode.value;// ここにコードを書く
-            const url = `${endpoint}?zipcode=${encodeURIComponent(zipcode)}`;
-        try {
-            const response = await fetch(url);
-            const data = await response.json();
-            if (data.results) {
-                const result = data.results[0];
-                const address = `${result.address1}${result.address2}${result.address3}`;
-                document.getElementById("result").innerHTML = `住所：${address}`;
-            } else {
-                document.getElementById("result").innerHTML = `該当する住所が見つかりませんでした。`;
+            const zipcode = myForm.zipcode.value;
+            const resultDiv = document.getElementById("result");
+            // 郵便番号が7桁の数字であることを確認
+            if (!/^\d{7}$/.test(zipcode)) {
+                resultDiv.innerHTML = "<p style='color: red;'>郵便番号は7桁の数字で入力してください。</p>";
+                return; // 処理を中断
             }
-        } 
-        catch (error) {
-            document.getElementById("result").innerHTML = `エラーが発生しました: ${error}`;
+            // ここにコードを書く
+            // zipcloudのAPI呼び出して結果を表示する
+            try {
+                const url = `${endpoint}?zipcode=${zipcode}`;
+                const response = await fetch(url);
+                const data = await response.json();
+                if (data.results) {
+                    // 検索結果がある場合
+                    let address = "";
+                    for (const item of data.results) {
+                        address += `<p>${item.address1}${item.address2}${item.address3}</p>`;
+                    }
+                    resultDiv.innerHTML = address;
+                } else if (data.message) {
+                    // エラーメッセージがある場合（例：該当する郵便番号がない）
+                    resultDiv.innerHTML = `<p style='color: red;'>${data.message}</p>`;
+                } else {
+                    // その他のエラー
+                    resultDiv.innerHTML = "<p style='color: red;'>住所が見つかりませんでした。</p>";
+                }
+            } catch (error) {
+                // ネットワークエラーなど、API呼び出し自体に問題があった場合
+                console.error("API呼び出し中にエラーが発生しました:", error);
+                resultDiv.innerHTML = "<p style='color: red;'>API呼び出し中にエラーが発生しました。インターネット接続を確認してください。</p>";
+            }
         }
-    }
-    ocument.getElementById("result").innerHTML =  myForm.zipcode.value; // 現状ではそのまま表示しているだけ
-        
     </script>
 </body>
 </html>
